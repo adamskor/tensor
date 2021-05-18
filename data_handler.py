@@ -3,8 +3,9 @@ from pathlib import Path
 import json
 import datetime as dt
 import pandas_datareader as web
+import random as rd
 dicts = []
-
+number_of_tickers = 10
 def extract_tickers():
     data = {}
     data['Data'] = []
@@ -26,9 +27,9 @@ def extract_tickers():
     with open('data/data.json', 'w') as f:
         json.dump(data, f)
 
-def parse_trends(ticker_name):
-    start = dt.datetime(2011,1,1)
-    stop = dt.datetime(2021,5,15)
+def parse_trends(ticker_name, start = dt.datetime(2011,1,1),stop = dt.datetime(2021,5,15)):
+
+
     try:
         data = web.DataReader(ticker_name, 'yahoo', start, stop)
         data = data['Close']
@@ -120,6 +121,7 @@ def get_average_trends(ticker_name):
     fourday = []
     fiveday = []
     for i in simp_trend.values():
+        #print(i)
         if i[0] == 2:
             oneday.append(i)
         if i[0] == 3:
@@ -132,51 +134,63 @@ def get_average_trends(ticker_name):
             fiveday.append(i)
     avgdown = []
     avgup = []
+    avgupday = []
     try:
         for p in oneday:
+            print(p)
             avgdown.append(p[1])
+            avgupday.append(p[2])
             avgup.append(p[3])
-            ticker_name['oneday'] = [len(oneday)/len(simp_trend.values()), sum(avgdown)/len(avgdown), sum(avgup)/len(avgup)]
+        ticker_name['oneday'] = [len(oneday)/len(simp_trend.values()), sum(avgdown)/len(avgdown), sum(avgup)/len(avgup), sum(avgupday)/len(avgupday)]
     except:
         pass
         avgdown = []
         avgup = []
+        avgupday = []
     try:
         for p in twoday:
             avgdown.append(p[1])
+            avgupday.append(p[2])
             avgup.append(p[3])
-            ticker_name['twoday'] = [len(twoday)/len(simp_trend.values()), sum(avgdown)/len(avgdown), sum(avgup)/len(avgup)]
+        ticker_name['twoday'] = [len(twoday)/len(simp_trend.values()), sum(avgdown)/len(avgdown), sum(avgup)/len(avgup), sum(avgupday)/len(avgupday)]
     except:
         pass
         avgdown = []
         avgup = []
+        avgupday = []
     try:
         for p in threeday:
             avgdown.append(p[1])
+            avgupday.append(p[2])
             avgup.append(p[3])
-            ticker_name['threeday'] = [len(threeday)/len(simp_trend.values()), sum(avgdown)/len(avgdown), sum(avgup)/len(avgup)]
+        ticker_name['threeday'] = [len(threeday)/len(simp_trend.values()), sum(avgdown)/len(avgdown), sum(avgup)/len(avgup), sum(avgupday)/len(avgupday)]
     except:
         pass
         avgdown = []
         avgup = []
+        avgupday = []
     try:
         for p in fourday:
             avgdown.append(p[1])
+            avgupday.append(p[2])
             avgup.append(p[3])
-            ticker_name['fourday'] = [len(fourday)/len(simp_trend.values()), sum(avgdown)/len(avgdown), sum(avgup)/len(avgup)]
+        ticker_name['fourday'] = [len(fourday)/len(simp_trend.values()), sum(avgdown)/len(avgdown), sum(avgup)/len(avgup), sum(avgupday)/len(avgupday)]
     except:
         pass
         avgdown = []
         avgup = []
+        avgupday = []
     try:
         for p in fiveday:
             avgdown.append(p[1])
+            avgupday.append(p[2])
             avgup.append(p[3])
-            ticker_name['fiveday'] = [len(fiveday)/len(simp_trend.values()), sum(avgdown)/len(avgdown), sum(avgup)/len(avgup)]
+        ticker_name['fiveday'] = [len(fiveday)/len(simp_trend.values()), sum(avgdown)/len(avgdown), sum(avgup)/len(avgup), sum(avgupday)/len(avgupday)]
     except:
         pass
-    print(ticker_name)
-    dicts.append(ticker_name)
+
+    return ticker_name
+    #dicts.append(ticker_name)
 
 
 
@@ -193,9 +207,10 @@ def get_valid_tickers():
     valid_t = {}
     valid_t['Tickers'] = []
     tickers = get_all_tickers()
+    print(tickers)
     start = dt.datetime(2021,5,10)
     stop = dt.datetime(2021,5,11)
-    for n,i in enumerate(tickers):
+    for n,i in enumerate(tickers[:10000]):
         if n % 10 == 0:
             print(n)
         try:
@@ -203,16 +218,176 @@ def get_valid_tickers():
             valid_t['Tickers'].append(i)
         except:
             print(i + ' is not in Yahoo database')
-    with open('data/validtickers.json', 'w') as f:
+    with open('data/validtickers1.json', 'w') as f:
         json.dump(valid_t, f)
+
 
 def parse_tickers():
     with open('data/validtickers.json', 'r') as f:
         data = json.load(f)
     for i in data['Tickers']:
         print(i)
-        get_average_trends(i)
+        piss = get_average_trends(i)
+        print(piss)
+        with open('data/tickerdata/' + i + '.json', 'w') as f:
+           json.dump(piss, f)
 
-parse_tickers()
-with open('data/tickeravg.json', 'w') as f:
-    json.dump(dicts, f)
+
+#parse_tickers()
+#with open('data/tickeravg.json', 'w') as f:
+#    json.dump(dicts, f)
+def decide_buys(recommendations):
+    buys = {}
+    rec_with_scores = {}
+    for key, value in recommendations.items():
+    #    print(key, value)
+        score = 0.1*value[0] +0.3*value[1] + 0.1*value[2]
+    #    print(score)
+        value.insert(2, score)
+    #    print(value)
+        rec_with_scores[key] = value
+    sorted_shit = sorted(rec_with_scores.items(), reverse = True, key = lambda e: e[1][2])
+    buy = sorted_shit[:3]
+    for i in buy:
+        buys[list(i)[0]] = list(i)[1][0]
+    return buys
+
+
+def test(current_date):
+    days = {1 : 'oneday', 2 : 'twoday', 3 : 'threeday', 4 : 'fourday' , 5 : 'fiveday'}
+    delta = dt.timedelta(6)
+    start = current_date - delta
+    dict = {}
+    recommendations = {}
+    with open('data/validtickers.json', 'r') as f:
+        data = json.load(f)
+    for k, i in enumerate(data['Tickers'][:number_of_tickers]):
+        #print(k)
+        try:
+            temp = []
+            data = web.DataReader(i, 'yahoo', start, current_date)['Close']
+            data = data.tolist()
+            #print(data)
+            if data[-2] > data[-1]:
+                temp.append(data[-1])
+                temp.append(data[-2])
+                if data[-3] > data[-2]:
+                    temp.append(data[-3])
+                    if data[-4] > data[-3]:
+                        temp.append(data[-4])
+                        if data[-5] > data[-4]:
+                            temp.append(data[-5])
+            if len(temp) > 1:
+                down_len = len(temp)
+                dict[i] = temp
+                with open('data/tickerdata/' + i +'.json', 'r') as f:
+                    data = json.load(f)
+                #print(temp)
+                interest = data[days[down_len]]
+                #print(interest)
+                down_size = ((temp[down_len-1] - temp[0])/temp[0])*100
+                #print(down_size)
+                #if down_size > interest[1] and interest[2] > 1:
+                if interest[2] > 1:
+                    recommendations[i] = [round(interest[3]), down_len, interest[2]] #days to keep, days of donwtrend, size of uptrend
+        except:
+            pass
+    return decide_buys(recommendations)
+
+
+def test_profit(date):
+    buy = test(date)
+    inc_one = dt.timedelta(1)
+    profit_data = {}
+    for key, days in buy.items():
+        delta = dt.timedelta(days+1)
+        date_sell = date + delta
+        data = web.DataReader(key, 'yahoo', date, date_sell)['Close']
+        while len(data.tolist()) < days + 1:
+            date_sell += inc_one
+            data = web.DataReader(key, 'yahoo', date, date_sell)['Close']
+        #print(data)
+        purchase_price = data.tolist()[0]
+        sell_price = data.tolist()[days]
+        profit = sell_price - purchase_price
+        perc_profit = ((sell_price - purchase_price)/purchase_price)*100
+        perc_profit = round(perc_profit, 4)
+        #print(profit)
+        profit_data[key] = perc_profit
+        #print('For ticker ' + key + ': '+ str(perc_profit) + '% profit/loss')
+    return profit_data
+
+def test_profit_with_courtage(date):
+    buy = test(date)
+    inc_one = dt.timedelta(1)
+    profit_data = {}
+    for key, days in buy.items():
+        try:
+            delta = dt.timedelta(days+1)
+            date_sell = date + delta
+            while True:
+                try:
+                    tst2 = web.DataReader(key, 'yahoo', date_sell, date_sell)['Close']
+                    break
+                except:
+                    date_sell = date_sell + inc_one
+
+            data = web.DataReader(key, 'yahoo', date, date_sell)['Close']
+            while len(data.tolist()) < days + 1:
+                date_sell += inc_one
+                data = web.DataReader(key, 'yahoo', date, date_sell)['Close']
+            #print(data)
+            purchase_price = data.tolist()[0]*1.0025
+            sell_price = data.tolist()[days]*(1-0.0025)
+            n = 2
+            while purchase_price < 100:
+                print(purchase_price)
+                print(sell_price)
+                purchase_price = purchase_price*n
+                sell_price = sell_price*n
+                n += 1
+            profit = sell_price - purchase_price
+            #perc_profit = ((sell_price - purchase_price)/purchase_price)*100
+            #perc_profit = round(perc_profit, 4)
+            #print(profit)
+            profit_data[key] = profit
+            #print('For ticker ' + key + ': '+ str(perc_profit) + '% profit/loss')
+        except:
+            pass
+    return profit_data
+
+def test_dates():
+    date = dt.datetime(2012,1,1)
+    for i in range(25):
+        test_date = date + dt.timedelta(rd.randint(0, 3000))
+        profit_data = test_profit(test_date)
+
+        print('For '+ str(test_date) + ' the profits were ')
+        print(profit_data.items())
+            #print(i, data)
+
+def test_a_set_period():
+    date = dt.datetime(2018,8,5)
+    inc_one = dt.timedelta(1)
+    profit = 0
+    for i in range(25):
+        while True:
+            try:
+                tst1 = web.DataReader('AAPL', 'yahoo', date, date)['Close']
+                break
+            except:
+                date = date + inc_one
+        test_date = date + dt.timedelta(i)
+        profit_data = test_profit_with_courtage(test_date)
+        for p in profit_data.values():
+            print(p)
+            profit = profit + p
+        print('For '+ str(test_date) + ' the profits were ')
+        print(profit_data.items())
+        print('Profit so far: ')
+        print(round(profit,3))
+#test_profit(dt.datetime(2020,5,17))
+#test_dates()
+test_a_set_period()
+#parse_tickers()
+#get_valid_tickers()
